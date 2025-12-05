@@ -1,5 +1,4 @@
 import numpy as np
-from LinearSolver import discretisationMatrix 
 import matplotlib.pyplot as plt
 from matplotlib.tri import Triangulation
 
@@ -78,9 +77,116 @@ from matplotlib.tri import Triangulation
 
 #     return x, max_iter, False
 
+def f(x,y):
+    return 2*(y**3 - y**4) - np.exp(x) + 6*(x**2 - x)*y + 12*(x - x**2)*y**2 - 2j*((x-x**2)*(y**3 - y**4) + np.exp(x)) 
+
+def g(x,y):
+    return x*(1-x)*y**3 * (1-y) + np.exp(x)
+
+def discretisationMatrix(N):
+    """
+    Description
+    Same as other function to build up matrix but now with c==2 and so the term h^2 c j (COMPLEX).
+
+    NOTE: We use sparse functions instead of in V1, as there code breaks due to lack of memory
+    """
+    A = np.zeros(((N+1)**2, (N+1)**2), dtype=complex)  # Construct the empty (N+1)^2 X (N+1)^2 matrix
+    b = np.zeros((N+1)**2, dtype=complex)  # RHS of Au = b
+    c = 2
+
+    for j in range(0, N+1):  # Due to horizontal ordering we start with j as the outer loop
+        for i in range(0, N+1):
+            k = (i+1) + (j-1 + 1) * (N+1)  # Global ordering index
+            """
+            i + 1 and (j-1) + 1, as we want k to follow the same horizontal
+            ordering and because in Python we start at 0 instead of at 1.
+            For this reason for the matrix elements you will see k-1, 
+            instead of k.
+            x_i = (i-1 + 1)h
+            y_j = (j-1 + 1)h
+            """ 
+            # print(i,j)
+            # print(k)
+
+            # Boundary points
+            # Do k-1 as python count from 0
+            if j==0:  # Southern Boundary
+                A[k-1,k-1] = 1
+                b[k-1] = g(i*h, j*h)
+            elif j==N:  # Northern Boundary
+                A[k-1,k-1] = 1
+                b[k-1] = g(i*h, j*h)
+            elif i==N:  # Eastern Boundary
+                A[k-1,k-1] = 1
+                b[k-1] = g(i*h, j*h)
+            elif i==0:  # Western Boundary
+                A[k-1,k-1] = 1
+                b[k-1] = g(i*h, j*h)
+           
+
+            # Corner points
+            elif i==1 and j==1:  # Bottom left
+                A[k-1, ((i+1) + (j-1+1) * (N+1)) - 1] = (4 / h**2) - 2j # u{i}{j}
+                A[k-1, ((i+1 + 1) + (j-1+1) * (N+1)) - 1] = -1 / h**2  # u{i+1}{j}
+                A[k-1, ((i+1) + (j-1+1 + 1) * (N+1)) - 1] = -1 / h**2  # u{i}{j+1}
+                b[k-1] = f(i*h, j*h) + (g((i-1)*h, j*h) + g(i*h, (j-1)*h)) / h**2
+            elif i==N-1 and j==1:  # Bottom right
+                A[k-1, ((i+1) + (j-1+1) * (N+1)) - 1] = (4 / h**2) - 2j  # u{i}{j}
+                A[k-1, ((i+1 - 1) + (j-1+1) * (N+1)) - 1] = -1 / h**2 # u{i-1}{j}
+                A[k-1, ((i+1) + (j-1+1 + 1) * (N+1)) -1] = -1 / h**2  # u{i}{j+1}
+                b[k-1] = f(i*h, j*h) + (g((i+1)*h, j*h) + g(i*h, (j-1)*h)) / h**2
+            elif i==1 and j==N-1:  # Top left (PROBLEM)
+                A[k-1, ((i+1) + (j-1+1) * (N+1)) - 1] = (4 / h**2) - 2j # u{i}{j}
+                A[k-1, ((i+1 + 1) + (j-1+1) * (N+1)) - 1] = -1 / h**2  # u{i+1}{j}
+                A[k-1, ((i+1) + (j-1+1 - 1) * (N+1)) - 1] = -1 / h**2  # u{i}{j-1}
+                b[k-1] = f(i*h, j*h) + (g((i-1)*h, j*h) + g(i*h, (j+1)*h)) / h**2
+            elif i==N-1 and j==N-1:  # Top right (PROBLEM)
+                A[k-1, ((i+1) + (j-1+1) * (N+1)) - 1] = 4 / h**2 - 2j # u{i}{j}
+                A[k-1, ((i+1 - 1) + (j-1+1) * (N+1)) - 1] = -1 / h**2  # u{i-1}{j}
+                A[k-1, ((i+1) + (j-1+1 - 1) * (N+1)) - 1] = -1 / h**2  # u{i}{j-1}
+                b[k-1] = f(i*h, j*h) + (g((i+1)*h, j*h) + g(i*h, (j+1)*h)) / h**2
+
+            # Points with as neighbour a boundary node
+            elif i==1:  # Near Western Boundary
+                A[k-1, ((i+1) + (j-1+1) * (N+1)) - 1] = (4 / h**2) - 2j  # u{i}{j}
+                A[k-1, ((i+1 + 1) + (j-1+1) * (N+1)) - 1] = -1 / h**2  # u{i+1}{j}
+                A[k-1, ((i+1) + (j-1+1 + 1) * (N+1)) - 1] = -1 / h**2  # u{i}{j+1}
+                A[k-1, ((i+1) + (j-1+1 - 1) * (N+1)) - 1] = -1 / h**2  # u{i}{j-1}
+                b[k-1] = f(i*h, j*h) + g((i-1)*h, j*h) / h**2
+            elif i==N-1:  # Near Eastern Boundary
+                A[k-1, ((i+1) + (j-1+1) * (N+1)) - 1] = (4 / h**2) - 2j  # u{i}{j}
+                A[k-1, ((i+1 - 1) + (j-1+1) * (N+1)) - 1] = -1 / h**2  # u{i-1}{j}
+                A[k-1, ((i+1) + (j-1+1 + 1) * (N+1)) - 1] = -1 / h**2  # u{i}{j+1}
+                A[k-1, ((i+1) + (j-1+1 - 1) * (N+1)) - 1] = -1 / h**2  # u{i}{j-1}
+                b[k-1] = f(i*h, j*h) + g((i+1)*h, j*h) / h**2
+            elif j==1:  # Near Southern Boundary
+                A[k-1, ((i+1) + (j-1+1) * (N+1)) - 1] = (4 / h**2) - 2j  # u{i}{j}
+                A[k-1, ((i+1 + 1) + (j-1+1) * (N+1)) - 1] = -1 / h**2  # u{i+1}{j}
+                A[k-1, ((i+1 - 1) + (j-1+1) * (N+1)) - 1] = -1 / h**2  # u{i-1}{j}
+                A[k-1, ((i+1) + (j-1+1 + 1) * (N+1)) - 1] = -1 / h**2  # u{i}{j+1}
+                b[k-1] = f(i*h, j*h) + g(i*h, (j-1)*h) / h**2
+            elif j==N-1:  # Near Northern Boundary
+                A[k-1, ((i+1) + (j-1+1) * (N+1)) - 1] = (4 / h**2) - 2j  # u{i}{j}
+                A[k-1, ((i+1 + 1) + (j-1+1) * (N+1)) - 1] = -1 / h**2  # u{i+1}{j}
+                A[k-1, ((i+1 - 1) + (j-1+1) * (N+1)) - 1] = -1 / h**2  # u{i-1}{j}
+                A[k-1, ((i+1) + (j-1+1 - 1) * (N+1)) - 1] = -1 / h**2  # u{i}{j-1}
+                b[k-1] = f(i*h, j*h) + g(i*h, (j+1)*h) / h**2
+            # Interior points
+            else:
+                A[k-1, ((i+1) + (j-1+1) * (N+1)) - 1] = (4 / h**2) - 2j  # u{i}{j}
+                A[k-1, ((i+1 + 1) + (j-1+1) * (N+1)) - 1] = -1 / h**2  # u{i+1}{j}
+                A[k-1, ((i+1 - 1) + (j-1+1) * (N+1)) - 1] = -1 / h**2  # u{i-1}{j}
+                A[k-1, ((i+1) + (j-1+1 - 1) * (N+1)) - 1] = -1 / h**2  # u{i}{j-1}
+                A[k-1, ((i+1) + (j-1+1 + 1) * (N+1)) - 1] = -1 / h**2  # u{i}{j+1}
+                b[k-1] = f(i*h, j*h)
+
+    # print("A =", A)
+    # print("b =", b)
+    return A, b
+
 def gauss_seidel_v2(A, b, Nx, Ny, x0=None, tol=1e-10, max_iter=500, verbose=True):
 
-    A = np.array(A, dtype=float)
+    A = np.array(A, dtype=float) 
     b = np.array(b, dtype=float)
 
     N = A.shape[0]
@@ -170,7 +276,7 @@ if __name__ == "__main__":
     A = discretisationMatrix(N)[0]
     b = discretisationMatrix(N)[1]
 
-    z_approx, iters, diff, converged = gauss_seidel_v2(A, b, Nx, Ny, x0=None, tol=1e-12, max_iter=5000, verbose=True)
+    z_approx, iters, diff, converged = gauss_seidel_v2(A, b, Nx, Ny, x0=None, tol=1e-6, max_iter=5000, verbose=True)
     print("\nApproximate solution:" )
     print(z_approx)
     print(f"||x_new - x_old||_inf = {diff:e}")
