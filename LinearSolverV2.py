@@ -2,17 +2,21 @@ import numpy as np
 from scipy.linalg import lu
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+from scipy.sparse import lil_matrix, csc_matrix
+from scipy.sparse.linalg import spsolve
 
 
 def discretisationMatrix(N):
     """
     Description
     Same as other function to build up matrix but now with c==2 and so the term h^2 c j (COMPLEX).
-    """
 
-    A = np.zeros(((N+1)**2, (N+1)**2), dtype=complex)  # Construct the empty (N+1)^2 X (N+1)^2 matrix
-    b = np.zeros((N+1)**2, dtype=complex)  # RHS of Au = b
+    NOTE: We use sparse functions instead of in V1, as there code breaks due to lack of memory
+    """
+    A = lil_matrix(((N+1)**2, (N+1)**2), dtype=complex)
+    b = np.zeros((N+1)**2, dtype=complex)
     c = 2
+
     for j in range(0, N+1):  # Due to horizontal ordering we start with j as the outer loop
         for i in range(0, N+1):
             k = (i+1) + (j-1 + 1) * (N+1)  # Global ordering index
@@ -101,7 +105,7 @@ def discretisationMatrix(N):
 
     # print("A =", A)
     # print("b =", b)
-    return A, b
+    return csc_matrix(A), b
 
 
 def f(x,y):
@@ -112,6 +116,10 @@ def g(x,y):
 
 
 def LU_decomp(B, RHS):
+    """
+    NOTE: This is not used in this version as it is too inefficient
+    Instead of LU we use the spsolve (BLACK MAGIC)
+    """
     p, l, u = lu(B)
     y = np.zeros((N+1)**2, dtype=complex)
     sol = np.zeros((N+1)**2, dtype=complex)
@@ -172,19 +180,18 @@ def error_max_norm(exact, approx):
     print("The error is:", error)
 
 
-### NOTE: NOT ENOUGH MEMOMRY FOR N >= 128 !!!!
 h = 1/16  # Stepsize
 N = int(1/h)
 print(N, "Gridpoints")
 A = discretisationMatrix(N)[0]
 b = discretisationMatrix(N)[1]
-# print(A)
+# print(A.toarray())  # Transforms back to a matrix we can read, so as an actual matrix
 # print(b)
 
 x_as = np.linspace(0, 1, N+1)
 y_as = np.linspace(0, 1, N+1)
-approximatedSol = LU_decomp(A, b)  # Numerical solution
-# plot_numerical_solution_LU(approximationSOl)  # Plot numerical solution
+numericalSol = spsolve(A, b)
+# plot_numerical_solution_LU(numericalSol)
 
 ### Construct exact solution following horizontal ordering
 exactSol = np.zeros((N+1)**2)
@@ -196,4 +203,4 @@ for j in range(0, N+1):
 # print("Numerical solution =", approximatedSol)
 
 ### Compute the error in infinity norm
-error_max_norm(exactSol, approximatedSol)
+error_max_norm(exactSol, numericalSol)
