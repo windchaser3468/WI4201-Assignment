@@ -103,23 +103,53 @@ def discretisationMatrix(N):
 
 
 def f(x,y):
-    return 2
-
-def g(x,y):
     return 1
 
+def g(x,y):
+    return 0
 
-def LU_decomp(B):
+
+def LU_decomp(B, RHS):
     p, l, u = lu(B)
-    print("wawaw")
-    print(l)
+    y = np.zeros((N+1)**2)
+    sol = np.zeros((N+1)**2)
+    
+    # Forward sub (See Algorithm 2 in Lecture notes)
+    for i in range((N+1)**2):
+        s = 0
+        for j in range(i):
+            s = s +  l[i][j] * y[j]  # L(i; 1 : i - 1) * y(1 : i - 1)
+        y[i] = (RHS[i] - s)
 
+    
+    # Backward sub
+    for p in range((N+1)**2 - 1, -1, -1):
+        s2 = 0 
+        for q in range(p+1, (N+1)**2):
+            s2 = s2 + u[p,q] * sol[q]
+        
+        sol[p] = (y[p] - s2) / u[p][p]
+    
+    print(sol)
+    return sol
+
+
+def exact_solution(x,y):
+    """
+    Description
+    Exact solution when c=2.
+    """
+    sol = x * (1-x) * y**3 * (1-y) + np.exp(x)
+    return sol
 
 
 h = 1/3  # Stepsize
 N = int(1/h)
 A = discretisationMatrix(N)[0]
-LU_decomp(A)
+b = discretisationMatrix(N)[1]
+LU_decomp(A, b)
 # ew = np.linalg.eig(A)[0]
 # ew = np.sort(ew)  # Sort the eigenvalues from small to large
 # print("Eigenavlues are", ew)
+
+# AAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHH
