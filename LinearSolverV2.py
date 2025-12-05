@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from scipy.sparse import lil_matrix, csc_matrix
 from scipy.sparse.linalg import spsolve
-
+import time
 
 def discretisationMatrix(N):
     """
@@ -114,7 +114,7 @@ def f(x,y):
 def g(x,y):
     return x*(1-x)*y**3 * (1-y) + np.exp(x)
 
-
+### LU Decomp is not used as function, use spsolve instead
 def LU_decomp(B, RHS):
     """
     NOTE: This is not used in this version as it is too inefficient
@@ -180,16 +180,17 @@ def error_max_norm(exact, approx):
     print("The error is:", error)
 
 
-h = 1/16  # Stepsize
+start_time = time.time()
+h = 1/1024  # Stepsize
 N = int(1/h)
 print(N, "Gridpoints")
-A = discretisationMatrix(N)[0]
-b = discretisationMatrix(N)[1]
+A, b = discretisationMatrix(N)
+# b = discretisationMatrix(N)[1]
 # print(A.toarray())  # Transforms back to a matrix we can read, so as an actual matrix
 # print(b)
 
-x_as = np.linspace(0, 1, N+1)
-y_as = np.linspace(0, 1, N+1)
+# x_as = np.linspace(0, 1, N+1)
+# y_as = np.linspace(0, 1, N+1)
 numericalSol = spsolve(A, b)
 # plot_numerical_solution_LU(numericalSol)
 
@@ -204,3 +205,5 @@ for j in range(0, N+1):
 
 ### Compute the error in infinity norm
 error_max_norm(exactSol, numericalSol)
+print("Computation time = ", time.time() - start_time, "seconds")
+print("===============")
