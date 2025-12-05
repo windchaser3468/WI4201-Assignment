@@ -111,7 +111,7 @@ def analytic_eigenvalues_Simplifiedmodel(k,l):
     print(lambda_kl)
 
 
-h = 1/3  # Stepsize
+h = 1/4  # Stepsize
 N = int(1/h)
 A = discretisationMatrix_simplifiedModel(N)
 ew = np.linalg.eig(A)[0]
