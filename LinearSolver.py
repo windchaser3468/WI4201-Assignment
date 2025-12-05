@@ -2,6 +2,9 @@ import numpy as np
 from scipy.linalg import lu
 
 
+########Test########
+
+
 def discretisationMatrix(N):
     """
     Description
