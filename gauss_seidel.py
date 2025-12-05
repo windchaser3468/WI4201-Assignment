@@ -119,13 +119,14 @@ def gauss_seidel_v2(A, b, Nx, Ny, x0=None, tol=1e-10, max_iter=500, verbose=True
 
         # check convergence
         diff = np.linalg.norm(x - x_old, ord=np.inf)
+        res = np.linalg.norm(b - A.dot(x), ord=np.inf)
         if verbose:
-            print(f"Iter {k}: ||x_new - x_old||_inf = {diff:e}")
+            print(f"Iter {k}: ||b - Ax^h||_inf = {res:e}")
 
-        if diff < tol:
-            return x, k, True
-
-    return x, max_iter, False
+        if res < tol:
+            return x, k, diff, True
+        
+    return x, max_iter, diff, False
 
 
 def index_formulation (N, h):
@@ -161,15 +162,16 @@ def plot_numerical_solution(x, y ,z):
 
 
 if __name__ == "__main__":
-    N = 16
+    N = 20
     Nx, Ny = N+1, N+1
     h = 1 / N
     A = discretisationMatrix(N)[0]
     b = discretisationMatrix(N)[1]
 
-    z_approx, iters, converged = gauss_seidel_v2(A, b, Nx, Ny, x0=None, tol=1e-7, max_iter=5000, verbose=True)
+    z_approx, iters, diff, converged = gauss_seidel_v2(A, b, Nx, Ny, x0=None, tol=1e-6, max_iter=5000, verbose=True)
     print("\nApproximate solution:" )
     print(z_approx)
+    print(f"||x_new - x_old||_inf = {diff:e}")
     print("Iterations:", iters)
     print("Converged:", converged)
 
