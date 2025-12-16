@@ -186,8 +186,12 @@ def discretisationMatrix(N):
 
 def gauss_seidel_v2(A, b, Nx, Ny, x0=None, tol=1e-10, max_iter=500, verbose=True):
 
+
+
     A = np.array(A, dtype=float) 
     b = np.array(b, dtype=float)
+    res_plot = []
+    k_plot = []
 
     N = A.shape[0]
     if A.shape[0] != A.shape[1]:
@@ -228,14 +232,16 @@ def gauss_seidel_v2(A, b, Nx, Ny, x0=None, tol=1e-10, max_iter=500, verbose=True
         # res = np.linalg.norm(b - A.dot(x), ord=np.inf)
         r = b - A.dot(x)
         res = np.linalg.norm(r, ord=np.inf) / np.linalg.norm(b, ord=np.inf)
+        k_plot.append(k)
+        res_plot.append(res)
+
         if verbose:
             print(f"Iter {k}: ||b - Ax^h||_inf = {res:e}")
 
         if res < tol:
-            return x, k, diff, True
+            return x, k, diff, True, k_plot, res_plot
         
-    return x, max_iter, diff, False
-
+    return x, max_iter, diff, False, k_plot, res_plot
 
 def index_formulation (N, h):
     Nx, Ny = N+1, N+1
@@ -268,15 +274,43 @@ def plot_numerical_solution(x, y ,z):
 
     plt.show()
 
+def plot_logy(x, y, xlabel='Number of iterations', ylabel='residual'):
+    """
+    Plots x vs y with a logarithmic scale on the y-axis.
+
+    Parameters
+    ----------
+    x : array-like
+        x-axis values
+    y : array-like
+        y-axis values (must be positive)
+    xlabel : str
+        Label for x-axis
+    ylabel : str
+        Label for y-axis
+    title : str
+        Plot title
+    """
+
+    plt.figure()
+    plt.plot(x, y, marker='o')
+    plt.yscale('log')
+
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.grid(True, which='both')
+
+    plt.show()
+
 
 if __name__ == "__main__":
-    N = 64
+    N = 128
     Nx, Ny = N+1, N+1
     h = 1 / N
     A = discretisationMatrix(N)[0]
     b = discretisationMatrix(N)[1]
 
-    z_approx, iters, diff, converged = gauss_seidel_v2(A, b, Nx, Ny, x0=None, tol=1e-6, max_iter=5000, verbose=True)
+    z_approx, iters, diff, converged, k_p, res_p = gauss_seidel_v2(A, b, Nx, Ny, x0=None, tol=1e-6, max_iter=5000, verbose=True)
     print("\nApproximate solution:" )
     print(z_approx)
     print(f"||x_new - x_old||_inf = {diff:e}")
@@ -285,6 +319,9 @@ if __name__ == "__main__":
 
     x, y = index_formulation (N, h)
     plot_numerical_solution(x, y ,z_approx)
+    plot_logy(k_p, res_p)
+
+    
 
 
 
