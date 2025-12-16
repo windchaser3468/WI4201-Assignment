@@ -173,13 +173,16 @@ def error_max_norm(exact, approx):
 
 
 ### NOTE: NOT ENOUGH MEMOMRY FOR N >= 128 !!!!
-h = 1/16  # Stepsize
+h = 1/3  # Stepsize
 N = int(1/h)
 print(N, "Gridpoints")
 A = discretisationMatrix(N)[0]
 b = discretisationMatrix(N)[1]
 # print(A)
 # print(b)
+ew = np.linalg.eig(A)[0]
+ew = np.sort(ew)  # Sort the eigenvalues from small to large
+print(ew)
 
 x_as = np.linspace(0, 1, N+1)
 y_as = np.linspace(0, 1, N+1)
