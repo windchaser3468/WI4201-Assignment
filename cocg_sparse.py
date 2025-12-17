@@ -324,7 +324,111 @@ def discretisationMatrix(N):
         
 #     return x, max_iter, diff, False, k_plot, res_plot
 
-def gauss_seidel_v2(A, b, Nx, Ny, x0=None, tol=1e-10, max_iter=500, verbose=True):
+# def gauss_seidel_v2(A, b, Nx, Ny, x0=None, tol=1e-10, max_iter=500, verbose=True):
+#     import numpy as np
+#     from scipy.sparse import issparse
+
+#     if issparse(A):
+#         A = A.tocsr()
+#     else:
+#         A = np.array(A, dtype=np.complex128)
+
+#     b = np.array(b, dtype=np.complex128)
+
+#     res_plot = []
+#     k_plot = []
+
+#     N = A.shape[0]
+#     if A.shape[0] != A.shape[1]:
+#         raise ValueError("A must be square.")
+#     if b.shape[0] != N:
+#         raise ValueError("Dimension mismatch between A and b.")
+#     if Nx * Ny != N:
+#         raise ValueError("Nx * Ny must equal the size of the system N.")
+
+#     if x0 is None:
+#         x = np.zeros_like(b, dtype=np.complex128)
+#     else:
+#         x = np.array(x0, dtype=np.complex128)
+
+#     if issparse(A):
+#         indptr = A.indptr
+#         indices = A.indices
+#         data = A.data
+
+#     bnorm = np.linalg.norm(b, ord=np.inf)
+#     if bnorm == 0:
+#         bnorm = 1.0
+
+#     for k in range(1, max_iter + 1):
+#         x_old = x.copy()
+
+#         if issparse(A):
+#             for p in range(N):
+#                 start, end = indptr[p], indptr[p + 1]
+#                 cols = indices[start:end]
+#                 vals = data[start:end]
+
+#                 # diagonal
+#                 mask_diag = (cols == p)
+#                 if not np.any(mask_diag):
+#                     raise ZeroDivisionError(f"Zero diagonal entry A[{p},{p}] (missing)")
+#                 a_pp = vals[mask_diag][0]
+#                 if a_pp == 0:
+#                     raise ZeroDivisionError(f"Zero diagonal entry A[{p},{p}]")
+
+#                 # split sums for GS: cols < p use updated x, cols > p use old x_old
+#                 mask_lt = (cols < p)
+#                 mask_gt = (cols > p)
+
+#                 s1 = np.dot(vals[mask_lt], x[cols[mask_lt]])         # updated
+#                 s2 = np.dot(vals[mask_gt], x_old[cols[mask_gt]])     # old
+
+#                 x[p] = (b[p] - s1 - s2) / a_pp
+
+#         else:
+#             for j in range(Ny):
+#                 for i in range(Nx):
+#                     p = j * Nx + i
+
+#                     row = A[p, :]
+#                     if row[p] == 0:
+#                         raise ZeroDivisionError(f"Zero diagonal entry A[{p},{p}]")
+
+#                     s1 = np.dot(row[:p], x[:p])
+#                     s2 = np.dot(row[p + 1:], x_old[p + 1:])
+
+#                     x[p] = (b[p] - s1 - s2) / row[p]
+
+#         # check convergence 
+#         diff = np.linalg.norm(x - x_old, ord=np.inf)
+
+#         r = b - A.dot(x)
+#         res = np.linalg.norm(r, ord=np.inf) / bnorm
+#         k_plot.append(k)
+#         res_plot.append(res)
+
+#         if verbose:
+#             print(f"Iter {k}: ||b - Ax^h||_inf = {res:e}")
+
+#         if res < tol:
+#             return x, k, diff, True, k_plot, res_plot
+
+#     return x, max_iter, diff, False, k_plot, res_plot
+
+
+
+def cocg(A, b, x0=None, tol=1e-10, max_iter=5000, verbose=True):
+    """
+    COCG (Conjugate Orthogonal Conjugate Gradient) for complex symmetric systems:
+        A x = b, with A = A^T (complex symmetric), not necessarily Hermitian.
+
+    Uses the transpose-based inner product (no complex conjugation):
+        (u, v) = u^T v
+
+    Returns:
+        x, iters, converged, k_plot, res_plot
+    """
     import numpy as np
     from scipy.sparse import issparse
 
@@ -334,88 +438,56 @@ def gauss_seidel_v2(A, b, Nx, Ny, x0=None, tol=1e-10, max_iter=500, verbose=True
         A = np.array(A, dtype=np.complex128)
 
     b = np.array(b, dtype=np.complex128)
+    N = b.shape[0]
 
-    res_plot = []
-    k_plot = []
+    x = np.zeros(N, dtype=np.complex128) if x0 is None else np.array(x0, dtype=np.complex128).copy()
 
-    N = A.shape[0]
-    if A.shape[0] != A.shape[1]:
-        raise ValueError("A must be square.")
-    if b.shape[0] != N:
-        raise ValueError("Dimension mismatch between A and b.")
-    if Nx * Ny != N:
-        raise ValueError("Nx * Ny must equal the size of the system N.")
+    r = b - A.dot(x)
+    p = r.copy()
 
-    if x0 is None:
-        x = np.zeros_like(b, dtype=np.complex128)
-    else:
-        x = np.array(x0, dtype=np.complex128)
-
-    if issparse(A):
-        indptr = A.indptr
-        indices = A.indices
-        data = A.data
+    rr = np.dot(r, r)
 
     bnorm = np.linalg.norm(b, ord=np.inf)
     if bnorm == 0:
         bnorm = 1.0
 
+    k_plot, res_plot = [], []
+
     for k in range(1, max_iter + 1):
-        x_old = x.copy()
+        Ap = A.dot(p)
+        denom = np.dot(p, Ap)  # p^T A p  (no conjugation)
 
-        if issparse(A):
-            for p in range(N):
-                start, end = indptr[p], indptr[p + 1]
-                cols = indices[start:end]
-                vals = data[start:end]
+        if denom == 0:
+            if verbose:
+                print(f"Iter {k}: breakdown (p^T A p = 0).")
+            return x, k - 1, False, k_plot, res_plot
 
-                # diagonal
-                mask_diag = (cols == p)
-                if not np.any(mask_diag):
-                    raise ZeroDivisionError(f"Zero diagonal entry A[{p},{p}] (missing)")
-                a_pp = vals[mask_diag][0]
-                if a_pp == 0:
-                    raise ZeroDivisionError(f"Zero diagonal entry A[{p},{p}]")
+        alpha = rr / denom
+        x = x + alpha * p
+        r_new = r - alpha * Ap
 
-                # split sums for GS: cols < p use updated x, cols > p use old x_old
-                mask_lt = (cols < p)
-                mask_gt = (cols > p)
-
-                s1 = np.dot(vals[mask_lt], x[cols[mask_lt]])         # updated
-                s2 = np.dot(vals[mask_gt], x_old[cols[mask_gt]])     # old
-
-                x[p] = (b[p] - s1 - s2) / a_pp
-
-        else:
-            for j in range(Ny):
-                for i in range(Nx):
-                    p = j * Nx + i
-
-                    row = A[p, :]
-                    if row[p] == 0:
-                        raise ZeroDivisionError(f"Zero diagonal entry A[{p},{p}]")
-
-                    s1 = np.dot(row[:p], x[:p])
-                    s2 = np.dot(row[p + 1:], x_old[p + 1:])
-
-                    x[p] = (b[p] - s1 - s2) / row[p]
-
-        # check convergence 
-        diff = np.linalg.norm(x - x_old, ord=np.inf)
-
-        r = b - A.dot(x)
-        res = np.linalg.norm(r, ord=np.inf) / bnorm
-
+        res_norm = np.linalg.norm(r_new, ord=np.inf) / bnorm
         k_plot.append(k)
-        res_plot.append(res)
+        res_plot.append(res_norm)
 
         if verbose:
-            print(f"Iter {k}: ||b - Ax||_inf / ||b||_inf = {res:e}")
+            print(f"Iter {k}: ||b - Ax||_inf / ||b||_inf = {res_norm:e}")
 
-        if res < tol:
-            return x, k, diff, True, k_plot, res_plot
+        if res_norm < tol:
+            return x, k, True, k_plot, res_plot
 
-    return x, max_iter, diff, False, k_plot, res_plot
+        rr_new = np.dot(r_new, r_new)
+
+        if rr == 0:
+            return x, k, True, k_plot, res_plot
+
+        beta = rr_new / rr
+        p = r_new + beta * p
+
+        r = r_new
+        rr = rr_new
+
+    return x, max_iter, False, k_plot, res_plot
 
 def index_formulation (N, h):
     Nx, Ny = N+1, N+1
@@ -478,15 +550,14 @@ def plot_logy(x, y, xlabel='Number of iterations', ylabel='residual'):
 
 
 if __name__ == "__main__":
-    N = 16
+    N = 256
     Nx, Ny = N+1, N+1
     h = 1 / N
     A, b = discretisationMatrix(N)
 
-    z_approx, iters, diff, converged, k_p, res_p = gauss_seidel_v2(A, b, Nx, Ny, x0=None, tol=1e-6, max_iter=5000, verbose=True)
-    print("\nApproximate solution:" )
+    z_approx, iters, converged, k_p, res_p = cocg(A, b, x0=None, tol=1e-6, max_iter=5000, verbose=True)
+    print("\nApproximate solution (COCG):" )
     print(z_approx)
-    print(f"||x_new - x_old||_inf = {diff:e}")
     print("Iterations:", iters)
     print("Converged:", converged)
 
@@ -495,7 +566,6 @@ if __name__ == "__main__":
     plot_logy(k_p, res_p)
 
     
-
 
 
 
