@@ -304,7 +304,7 @@ def plot_logy(x, y, xlabel='Number of iterations', ylabel='residual'):
 
 
 if __name__ == "__main__":
-    N = 128
+    N = 16
     Nx, Ny = N+1, N+1
     h = 1 / N
     A = discretisationMatrix(N)[0]
