@@ -401,16 +401,21 @@ def gauss_seidel_v2(A, b, Nx, Ny, x0=None, tol=1e-10, max_iter=500, verbose=True
                     x[p] = (b[p] - s1 - s2) / row[p]
 
         # check convergence 
-        diff = np.linalg.norm(x - x_old, ord=np.inf)
+        if k == 1:
+            r = b
 
+        r_old = r
         r = b - A.dot(x)
+        
         res = np.linalg.norm(r, ord=np.inf) / bnorm
+
+        diff = np.linalg.norm(r , ord=np.inf) / np.linalg.norm(r_old , ord=np.inf)
 
         k_plot.append(k)
         res_plot.append(res)
 
         if verbose:
-            print(f"Iter {k}: ||b - Ax||_inf / ||b||_inf = {res:e}")
+            print(f"Iter {k}: ||r||_inf / ||b||_inf = {res:e}", f"||r_new||_inf / ||r_old||_inf= {diff:e}")
 
         if res < tol:
             return x, k, diff, True, k_plot, res_plot
@@ -478,7 +483,7 @@ def plot_logy(x, y, xlabel='Number of iterations', ylabel='residual'):
 
 
 if __name__ == "__main__":
-    N = 16
+    N = 64
     Nx, Ny = N+1, N+1
     h = 1 / N
     A, b = discretisationMatrix(N)
@@ -486,7 +491,7 @@ if __name__ == "__main__":
     z_approx, iters, diff, converged, k_p, res_p = gauss_seidel_v2(A, b, Nx, Ny, x0=None, tol=1e-6, max_iter=5000, verbose=True)
     print("\nApproximate solution:" )
     print(z_approx)
-    print(f"||x_new - x_old||_inf = {diff:e}")
+    # print(f"||x_new - x_old||_inf = {diff:e}")
     print("Iterations:", iters)
     print("Converged:", converged)
 

@@ -197,13 +197,13 @@ def pcg_ic_realpart(A, b, x0=None, tol=1e-10, max_iter=5000, verbose=True):
         alpha = rz / denom
         x += alpha * p
         r_new = r - alpha * Ap
-
+        diff = np.linalg.norm(r_new , ord=np.inf) / np.linalg.norm(r , ord=np.inf)
         res = np.linalg.norm(r_new, ord=np.inf) / bnorm
         k_plot.append(k)
         res_plot.append(res)
 
         if verbose:
-            print(f"Iter {k}: ||b - Ax||_inf / ||b||_inf = {res:e}")
+            print(f"Iter {k}: ||r||_inf / ||b||_inf = {res:e}", f"||r_new||_inf  / ||r_old||_inf= {diff:e}")
 
         if res < tol:
             return x, k, True, k_plot, res_plot
@@ -279,7 +279,7 @@ def plot_logy(x, y, xlabel='Number of iterations', ylabel='residual'):
 
 
 if __name__ == "__main__":
-    N = 64
+    N = 256
     Nx, Ny = N+1, N+1
     h = 1 / N
     A, b = discretisationMatrix(N)

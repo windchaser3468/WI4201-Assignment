@@ -467,11 +467,12 @@ def cocg(A, b, x0=None, tol=1e-10, max_iter=5000, verbose=True):
         r_new = r - alpha * Ap
 
         res_norm = np.linalg.norm(r_new, ord=np.inf) / bnorm
+        diff = np.linalg.norm(r_new , ord=np.inf) / np.linalg.norm(r , ord=np.inf)
         k_plot.append(k)
         res_plot.append(res_norm)
 
         if verbose:
-            print(f"Iter {k}: ||b - Ax||_inf / ||b||_inf = {res_norm:e}")
+            print(f"Iter {k}: ||r||_inf / ||b||_inf = {res_norm:e}", f"||r_new||_inf  / ||r_old||_inf= {diff:e}")
 
         if res_norm < tol:
             return x, k, True, k_plot, res_plot

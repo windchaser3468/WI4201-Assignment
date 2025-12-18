@@ -259,13 +259,18 @@ def pgmres_ic(A, b, x0=None, tol=1e-10, max_iter=5000, verbose=True):
         # Update x in the original system space
         x = x_base + V[:, :j + 1].dot(y)
 
+        if  j == 0:
+            r_true = b
+
+        r_old = r_true
         r_true = b - Aop.dot(x)
         res = np.linalg.norm(r_true, ord=np.inf) / bnorm
+        diff = np.linalg.norm(r_true , ord=np.inf) / np.linalg.norm(r_old , ord=np.inf)
         k_plot.append(j + 1)
         res_plot.append(res)
 
         if verbose:
-            print(f"Iter {j+1}: ||b - Ax||_inf / ||b||_inf = {res:e}")
+            print(f"Iter {j+1}: ||r||_inf / ||b||_inf = {res:e}", f"||r_new||_inf / ||r_old||_inf= {diff:e}")
 
         if res < tol:
             return x, j + 1, True, k_plot, res_plot
