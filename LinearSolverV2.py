@@ -154,7 +154,7 @@ def exact_solution(x,y):
     return sol
 
 
-def plot_numerical_solution_LU(sol):
+def plot_numerical_solution_LU(sol, x_axis, y_axis):
     """
     Description
     Plots solutions
@@ -164,7 +164,7 @@ def plot_numerical_solution_LU(sol):
     
     fig = plt.figure()  # Create empty figure
     ax = fig.add_subplot(111, projection='3d')
-    X, Y = np.meshgrid(x_as, y_as)  # Does something??? 
+    X, Y = np.meshgrid(x_axis, y_axis)  # Does something??? 
     ax.plot_surface(X, Y, u)
 
     ax.set_title(f"Plot of the numerical solution with a direct solver (N = {N})")
@@ -181,7 +181,7 @@ def error_max_norm(exact, approx):
 
 
 start_time = time.time()
-h = 1/1024  # Stepsize
+h = 1/16  # Stepsize
 N = int(1/h)
 print(N, "Gridpoints")
 A, b = discretisationMatrix(N)
@@ -189,10 +189,16 @@ A, b = discretisationMatrix(N)
 # print(A.toarray())  # Transforms back to a matrix we can read, so as an actual matrix
 # print(b)
 
+### Compute the eigenvalues
+# ew = np.linalg.eig(A.toarray())[0]
+# ew = np.sort(ew)  # Sort the eigenvalues from small to large
+# print(ew)
+
+### Plot the numerical solution
 # x_as = np.linspace(0, 1, N+1)
 # y_as = np.linspace(0, 1, N+1)
 numericalSol = spsolve(A, b)
-# plot_numerical_solution_LU(numericalSol)
+# plot_numerical_solution_LU(numericalSol, x_as, y_as)
 
 ### Construct exact solution following horizontal ordering
 exactSol = np.zeros((N+1)**2)
